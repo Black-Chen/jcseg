@@ -1,0 +1,9 @@
+EN_WORD
+bada
+tae
+yuri
+ktv
+seeya
+hebe
+twins
+dana
