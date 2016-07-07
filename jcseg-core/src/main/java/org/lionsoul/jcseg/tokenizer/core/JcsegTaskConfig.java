@@ -1,12 +1,11 @@
 package org.lionsoul.jcseg.tokenizer.core;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.Properties;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.lionsoul.jcseg.util.Util;
 
 /**
@@ -102,6 +101,32 @@ public class JcsegTaskConfig implements Cloneable
     {
         this(proFile, true);
     }
+
+
+    public JcsegTaskConfig( String proFile, boolean resetPro, boolean useHdfs)
+    {
+        if (useHdfs) {
+            //reset the properties from the specifield file ?
+            if ( resetPro )
+            {
+                try {
+                    resetFromPropertyFileOnHdfs(proFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        } else {
+            //reset the properties from the specifield file ?
+            if ( resetPro )
+            {
+                try {
+                    resetFromPropertyFile(proFile);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
     
     public JcsegTaskConfig( String proFile, boolean resetPro ) 
     {
@@ -114,6 +139,19 @@ public class JcsegTaskConfig implements Cloneable
                 e.printStackTrace();
             }
         }
+    }
+
+    public void resetFromPropertyFileOnHdfs(String filePath) throws IOException {
+        Properties lexPro = new Properties();
+        String jarHome = null;
+        FileSystem fs = FileSystem.get(new Configuration());
+        Path path = new Path(filePath);
+        if ( !fs.exists(path) )
+        {
+            throw new IOException("property file [" + filePath + "] not found!");
+        }
+        lexPro.load(new InputStreamReader(fs.open(path)));
+        initConstants(lexPro, jarHome);
     }
     
     /**
@@ -191,7 +229,11 @@ public class JcsegTaskConfig implements Cloneable
                 throw new IOException("property file ["+proFile+"] not found!");
             lexPro.load(new FileReader(pro_file));
         }
-        
+        initConstants(lexPro, jarHome);
+
+    }
+
+    private void initConstants(Properties lexPro, String jarHome) throws IOException {
         /*about the lexicon*/
         //the lexicon path
         String lexDirs = lexPro.getProperty("lexicon.path");
@@ -202,26 +244,26 @@ public class JcsegTaskConfig implements Cloneable
             lexDirs = lexDirs.replace("{jar.dir}", jarHome);
         }
         //System.out.println("path: "+lexPath);
-        
+
         //Multiple path for lexicon.path.
         lexPath = lexDirs.split(";");
         File f = null;
-        for ( int i = 0; i < lexPath.length; i++ ) 
+        for ( int i = 0; i < lexPath.length; i++ )
         {
             lexPath[i] = java.net.URLDecoder.decode(lexPath[i], "UTF-8");
             f = new File(lexPath[i]);
-            if ( ! f.exists() ) 
-                throw new IOException("Invalid sub lexicon path " + lexPath[i] 
+            if ( ! f.exists() )
+                throw new IOException("Invalid sub lexicon path " + lexPath[i]
                         + " for lexicon.path in jcseg.properties");
             f = null;    //Let gc do its work.
         }
-        
+
         //the lexicon file prefix and suffix
         if ( lexPro.getProperty("lexicon.suffix") != null )
             suffix = lexPro.getProperty("lexicon.suffix");
         if ( lexPro.getProperty("lexicon.prefix") != null )
             prefix = lexPro.getProperty("lexicon.prefix");
-        
+
         //reset all the options
         if ( lexPro.getProperty("jcseg.maxlen") != null )
             MAX_LENGTH = Integer.parseInt(lexPro.getProperty("jcseg.maxlen"));
@@ -234,16 +276,16 @@ public class JcsegTaskConfig implements Cloneable
             MAX_CN_LNADRON = Integer.parseInt(lexPro.getProperty("jcseg.cnmaxlnadron"));
         if ( lexPro.getProperty("jcseg.nsthreshold") != null )
             NAME_SINGLE_THRESHOLD = Integer.parseInt(lexPro.getProperty("jcseg.nsthreshold"));
-        if ( lexPro.getProperty("jcseg.pptmaxlen") != null ) 
+        if ( lexPro.getProperty("jcseg.pptmaxlen") != null )
             PPT_MAX_LENGTH = Integer.parseInt(lexPro.getProperty("jcseg.pptmaxlen"));
         if ( lexPro.getProperty("jcseg.loadpinyin") != null
-                && lexPro.getProperty("jcseg.loadpinyin").equals("1")) 
+                && lexPro.getProperty("jcseg.loadpinyin").equals("1"))
             LOAD_CJK_PINYIN = true;
         if ( lexPro.getProperty("jcseg.loadsyn") != null
                 && lexPro.getProperty("jcseg.loadsyn").equals("1") )
             LOAD_CJK_SYN = true;
         if ( lexPro.getProperty("jcseg.loadpos") != null
-                && lexPro.getProperty("jcseg.loadpos").equals("1")) 
+                && lexPro.getProperty("jcseg.loadpos").equals("1"))
             LOAD_CJK_POS = true;
         if ( lexPro.getProperty("jcseg.clearstopword") != null
                 && lexPro.getProperty("jcseg.clearstopword").equals("1"))
@@ -262,19 +304,19 @@ public class JcsegTaskConfig implements Cloneable
             lexAutoload = true;
         if ( lexPro.getProperty("lexicon.polltime") != null )
             polltime = Integer.parseInt(lexPro.getProperty("lexicon.polltime"));
-        
+
         //secondary split
         if ( lexPro.getProperty("jcseg.ensencondseg") != null
                 && lexPro.getProperty("jcseg.ensencondseg").equals("0"))
             EN_SECOND_SEG = false;
         if ( lexPro.getProperty("jcseg.stokenminlen") != null )
             STOKEN_MIN_LEN = Integer.parseInt(lexPro.getProperty("jcseg.stokenminlen"));
-        
+
         //load the keep punctuations.
         if ( lexPro.getProperty("jcseg.keeppunctuations") != null )
             KEEP_PUNCTUATIONS = lexPro.getProperty("jcseg.keeppunctuations");
     }
-    
+
     /**property about lexicon file.*/
     public String getLexiconFilePrefix() {
         return prefix;
