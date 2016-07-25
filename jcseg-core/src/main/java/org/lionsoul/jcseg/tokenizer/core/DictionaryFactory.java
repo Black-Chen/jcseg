@@ -47,6 +47,41 @@ public class DictionaryFactory
         }
         return null;
     }
+
+    /**
+     * create a default ADictionary instance of class com.webssky.jcseg.Dictionary
+     *
+     * @param    config
+     * @param    sync
+     * @return    ADictionary
+     */
+    public static ADictionary createDefaultDictionaryFromHdfs(
+            JcsegTaskConfig config, boolean sync )
+    {
+        ADictionary dic = createDictionary(Dictionary.class,
+                new Class[]{JcsegTaskConfig.class, Boolean.class},
+                new Object[]{config, sync});
+        try {
+            //load lexicon from more than one path.
+            String[] lexpath = config.getLexiconPath();
+            if ( lexpath == null )
+                throw new IOException("Invalid lexicon path, " +
+                        "make sure the JcsegTaskConfig is initialized.");
+
+            //load word item from all the directories.
+            for ( String lpath : lexpath )
+                dic.loadFromLexiconDirectoryFromHdfs(lpath);
+            if ( dic.getConfig().isAutoload() ) dic.startAutoload();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return dic;
+    }
+
+    public static ADictionary createDefaultDictionaryFromHdfs(JcsegTaskConfig config) {
+        return createDefaultDictionaryFromHdfs(config, config.isAutoload());
+    }
     
     /**
      * create a default ADictionary instance of class com.webssky.jcseg.Dictionary

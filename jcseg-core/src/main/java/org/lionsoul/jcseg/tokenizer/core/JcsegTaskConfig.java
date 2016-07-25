@@ -251,11 +251,11 @@ public class JcsegTaskConfig implements Cloneable
         for ( int i = 0; i < lexPath.length; i++ )
         {
             lexPath[i] = java.net.URLDecoder.decode(lexPath[i], "UTF-8");
-            f = new File(lexPath[i]);
+            /*f = new File(lexPath[i]);
             if ( ! f.exists() )
                 throw new IOException("Invalid sub lexicon path " + lexPath[i]
                         + " for lexicon.path in jcseg.properties");
-            f = null;    //Let gc do its work.
+            f = null;    //Let gc do its work.*/
         }
 
         //the lexicon file prefix and suffix
